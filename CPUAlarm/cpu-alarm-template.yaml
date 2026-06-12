@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  CPU Alarm with SNS Email Alert.
+  Creates an SNS Topic with Email subscription and a CloudWatch Alarm
+  that triggers when EC2 CPU > 80% for 5 consecutive minutes.
+
+Parameters:
+  EmailAddress:
+    Description: Email address to receive alarm notifications
+    Type: String
+    Default: "your-email@example.com"
+  InstanceId:
+    Description: EC2 Instance ID to monitor
+    Type: String
+    Default: "i-xxxxxxxxxxxxxxxxx"
+  AlarmThreshold:
+    Description: CPU utilization threshold percentage
+    Type: Number
+    Default: 80
+  PeriodSeconds:
+    Description: Evaluation period in seconds (300 = 5 minutes)
+    Type: Number
+    Default: 300
+  EvaluationPeriods:
+    Description: Number of consecutive periods breaching threshold before alarm
+    Type: Number
+    Default: 1
+
+Resources:
+  # ──────────────────────────────────────────
+  # SNS Topic
+  # ──────────────────────────────────────────
+  CPUAlarmSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: CPUAlarmTopic
+      DisplayName: CPU Alarm
+      Tags:
+        - Key: Project
+          Value: CPUAlarm
+        - Key: Environment
+          Value: Production
+
+  # ──────────────────────────────────────────
+  # SNS Topic Policy (allow CloudWatch to publish)
+  # ──────────────────────────────────────────
+  CPUAlarmSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref CPUAlarmSNSTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudWatchToPublish
+            Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref CPUAlarmSNSTopic
+
+  # ──────────────────────────────────────────
+  # Email Subscription
+  # ──────────────────────────────────────────
+  CPUAlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref CPUAlarmSNSTopic
+      Protocol: email
+      Endpoint: !Ref EmailAddress
+
+  # ──────────────────────────────────────────
+  # CloudWatch Alarm — ALARM state
+  # ──────────────────────────────────────────
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CPUAlarm-HighCPU
+      AlarmDescription: Alert when EC2 CPU > 80% for 5 consecutive minutes
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref CPUAlarmSNSTopic
+      OKActions:
+        - !Ref CPUAlarmSNSTopic      # Recovery notification
+      InsufficientDataActions: []
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      ExtendedStatistic: ""
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref InstanceId
+      Period: !Ref PeriodSeconds
+      EvaluationPeriods: !Ref EvaluationPeriods
+      DatapointsToAlarm: 1
+      Threshold: !Ref AlarmThreshold
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      Tags:
+        - Key: Project
+          Value: CPUAlarm
+
+Outputs:
+  SNSTopicArn:
+    Description: ARN of the SNS Topic
+    Value: !Ref CPUAlarmSNSTopic
+    Export:
+      Name: CPUAlarm-SNSTopicArn
+
+  AlarmArn:
+    Description: ARN of the CloudWatch Alarm
+    Value: !GetAtt CPUAlarm.Arn
+    Export:
+      Name: CPUAlarm-AlarmArn
+
+  AlarmName:
+    Description: Name of the CloudWatch Alarm
+    Value: !Ref CPUAlarm

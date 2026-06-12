@@ -1,0 +1,109 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+    "debug": false
+  },
+  "metrics": {
+    "namespace": "CWAgent",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "disk": {
+        "measurement": [
+          "disk_used_percent",
+          "disk_inodes_free"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "/",
+          "/dev/shm",
+          "/home",
+          "/var",
+          "/tmp"
+        ]
+      },
+      "diskio": {
+        "measurement": [
+          "io_read_time",
+          "io_write_time",
+          "io_read",
+          "io_write",
+          "iops_in_progress"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "*"
+        ]
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent",
+          "mem_available_percent",
+          "mem_total",
+          "mem_free",
+          "mem_cached"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "net": {
+        "measurement": [
+          "net_bytes_sent",
+          "net_bytes_recv",
+          "net_packets_sent",
+          "net_packets_recv",
+          "net_err_in",
+          "net_err_out",
+          "net_drop_in",
+          "net_drop_out"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": [
+          "eth0",
+          "ens5"
+        ]
+      },
+      "netstat": {
+        "measurement": [
+          "netstat_established",
+          "netstat_time_wait",
+          "netstat_close_wait",
+          "netstat_listen",
+          "netstat_syn_sent",
+          "netstat_syn_recv"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "processes": {
+        "measurement": [
+          "proc_run",
+          "proc_total"
+        ],
+        "metrics_collection_interval": 60
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "ImageId": "${aws:ImageId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "aggregation_dimensions": [
+      ["InstanceId"],
+      ["InstanceType"],
+      ["AutoScalingGroupName"],
+      []
+    ]
+  }
+}
