@@ -24,7 +24,9 @@ File này ghi lại tiến độ hoàn thành bài Hands-On. Mỗi mục cần c
 👉 https://console.aws.amazon.com/sns/v3/home#/topics/arn:aws:sns:us-east-1:593777010472:CPUAlarmTopic
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 1a] Trang SNS Topic — ARN hiển thị đầy đủ
+
+![SCREENSHOT 1a](asset/1a.png)
+*Trang SNS Topic — ARN hiển thị đầy đủ*
 
 ---
 
@@ -34,7 +36,9 @@ File này ghi lại tiến độ hoàn thành bài Hands-On. Mỗi mục cần c
 👉 https://console.aws.amazon.com/sns/v3/home#/subscriptions/arn:aws:sns:us-east-1:593777010472:CPUAlarmTopic
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 2a] Danh sách Subscriptions — Email endpoint `haileab542@gmail.com` với Status: `Pending confirmation`
+
+![SCREENSHOT 2a](asset/2a.png)
+*Danh sách Subscriptions — Email endpoint `haileab542@gmail.com` với Status: `Pending confirmation`*
 
 ---
 
@@ -43,8 +47,9 @@ File này ghi lại tiến độ hoàn thành bài Hands-On. Mỗi mục cần c
 > ⚠️ **Kiểm tra email `haileab542@gmail.com`** — AWS đã gửi email xác nhận từ `no-reply@sns.amazonaws.com`. Nhấn **Confirm subscription** trong email.
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 3a] Email nhận được từ AWS Notifications (Subject: "AWS Notification - Subscription Confirmation")
-- [SCREENSHOT 3b] Trang Subscription sau khi xác nhận → Status: `Confirmed`
+
+![SCREENSHOT 3b](asset/3b.png)
+*Trang Subscription sau khi xác nhận → Status: `Confirmed`*
 
 ---
 
@@ -72,8 +77,12 @@ File này ghi lại tiến độ hoàn thành bài Hands-On. Mỗi mục cần c
 | OK action | `CPUAlarmTopic` (SNS) |
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 4a] CloudWatch Alarm detail — xem đầy đủ cấu hình alarm
-- [SCREENSHOT 4b] Phần Actions — Alarm state và OK state đều trỏ đến `CPUAlarmTopic`
+
+![SCREENSHOT 4a](asset/4a.png)
+*CloudWatch Alarm detail — xem đầy đủ cấu hình alarm*
+
+![SCREENSHOT 4b](asset/4b.png)
+*Phần Actions — Alarm state và OK state đều trỏ đến `CPUAlarmTopic`*
 
 ---
 
@@ -100,8 +109,12 @@ aws ec2 describe-instances --instance-ids i-06f3580ee2b478cf6 --query 'Reservati
 ```
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 5a] SSH terminal — lệnh `stress --cpu 4` đang chạy
-- [SCREENSHOT 5b] CloudWatch Dashboard — CPU Utilization metric đang tăng cao vượt ngưỡng 80%
+
+![SCREENSHOT 5a](asset/5a.png)
+*SSH terminal — lệnh `stress --cpu 4` đang chạy*
+
+![SCREENSHOT 5b](asset/5b.png)
+*CloudWatch Dashboard — CPU Utilization metric đang tăng cao vượt ngưỡng 80%*
 
 ---
 
@@ -113,8 +126,9 @@ aws ec2 describe-instances --instance-ids i-06f3580ee2b478cf6 --query 'Reservati
 > ⏱️ **Lưu ý:** Alarm cần 5 phút data vượt ngưỡng để chuyển sang ALARM. Sau khi chạy stress ~6-7 phút, alarm sẽ trigger.
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 6a] CloudWatch Alarms list — trạng thái chuyển từ `OK` hoặc `INSUFFICIENT_DATA` → `ALARM`
-- [SCREENSHOT 6b] Alarm detail — biểu đồ CPU với đường ngưỡng 80% và vùng ALARM highlighted
+
+![SCREENSHOT 6a+b](asset/6a+b.png)
+*CloudWatch Alarms list — trạng thái chuyển từ `OK` hoặc `INSUFFICIENT_DATA` → `ALARM` và biểu đồ CPU với đường ngưỡng 80%*
 
 ---
 
@@ -123,8 +137,9 @@ aws ec2 describe-instances --instance-ids i-06f3580ee2b478cf6 --query 'Reservati
 > ⚠️ **Kiểm tra email `haileab542@gmail.com`** — Email sẽ có Subject: "Amazon SNS Notification" hoặc "ALARM: CPUAlarm-HighCPU"
 
 **Screenshots cần chụp:**
-- [SCREENSHOT 7a] Email nhận được từ AWS Notifications (Subject: ALARM)
-- [SCREENSHOT 7b] Nội dung email — thông tin chi tiết về alarm (Instance ID, CPU %, Threshold)
+
+![SCREENSHOT 7a+b](asset/7a+b.png)
+*Email nhận được từ AWS Notifications (Subject: ALARM) và nội dung email — thông tin chi tiết về alarm (Instance ID, CPU %, Threshold)*
 
 ---
 
@@ -189,21 +204,21 @@ aws sns delete-topic --topic-arn arn:aws:sns:us-east-1:593777010472:CPUAlarmTopi
 
 | # | Screenshot | AWS Console Link | Trạng thái |
 |---|-----------|-----------------|-----------|
-| 1a | SNS Topic — ARN visible | [SNS Topic](https://console.aws.amazon.com/sns/v3/home#/topics/arn:aws:sns:us-east-1:593777010472:CPUAlarmTopic) | [ ] |
-| 2a | Email Subscription — Pending | [SNS Subscriptions](https://console.aws.amazon.com/sns/v3/home#/subscriptions) | [ ] |
-| 3a | Confirmation email received | Email box | [ ] |
-| 3b | Subscription status: Confirmed | [SNS Subscriptions](https://console.aws.amazon.com/sns/v3/home#/subscriptions) | [ ] |
-| 4a | Alarm detail page | [CloudWatch Alarm](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [ ] |
-| 4b | Alarm Actions configured | [CloudWatch Alarm](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [ ] |
-| 5a | EC2 stress test running | SSH terminal | [ ] |
-| 5b | CPU metric rising | [CloudWatch Metrics](https://console.aws.amazon.com/cloudwatch/home#metricsV2:namespace=AWS/EC2) | [ ] |
-| 6a | Alarm state: ALARM | [CloudWatch Alarms](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [ ] |
-| 6b | Alarm graph with ALARM zone | [CloudWatch Alarm](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [ ] |
-| 7a | Email alert received | Email box | [ ] |
-| 7b | Email alert content | Email box | [ ] |
-| 8  | Alarm deleted | [CloudWatch Alarms](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:) | [ ] |
-| 9  | EC2 terminated | [EC2 Instances](https://console.aws.amazon.com/ec2/home#Instances:v=3;) | [ ] |
-| 10 | SNS Topic deleted | [SNS Topics](https://console.aws.amazon.com/sns/v3/home#/topics) | [ ] |
+| 1a | SNS Topic — ARN visible | [SNS Topic](https://console.aws.amazon.com/sns/v3/home#/topics/arn:aws:sns:us-east-1:593777010472:CPUAlarmTopic) | [x] |
+| 2a | Email Subscription — Pending | [SNS Subscriptions](https://console.aws.amazon.com/sns/v3/home#/subscriptions) | [x] |
+| 3a | Confirmation email received | Email box | [x] |
+| 3b | Subscription status: Confirmed | [SNS Subscriptions](https://console.aws.amazon.com/sns/v3/home#/subscriptions) | [x] |
+| 4a | Alarm detail page | [CloudWatch Alarm](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [x] |
+| 4b | Alarm Actions configured | [CloudWatch Alarm](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [x] |
+| 5a | EC2 stress test running | SSH terminal | [x] |
+| 5b | CPU metric rising | [CloudWatch Metrics](https://console.aws.amazon.com/cloudwatch/home#metricsV2:namespace=AWS/EC2) | [x] |
+| 6a | Alarm state: ALARM | [CloudWatch Alarms](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [x] |
+| 6b | Alarm graph with ALARM zone | [CloudWatch Alarm](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:alarm/CPUAlarm-HighCPU) | [x] |
+| 7a | Email alert received | Email box | [x] |
+| 7b | Email alert content | Email box | [x] |
+| 8  | Alarm deleted | [CloudWatch Alarms](https://console.aws.amazon.com/cloudwatch/home#alarmsV2:) | [x] |
+| 9  | EC2 terminated | [EC2 Instances](https://console.aws.amazon.com/ec2/home#Instances:v=3;) | [x] |
+| 10 | SNS Topic deleted | [SNS Topics](https://console.aws.amazon.com/sns/v3/home#/topics) | [x] |
 
 ---
 
