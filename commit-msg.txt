@@ -1,6 +1,0 @@
-feat(AgentEC2): add evidence screenshots and update checklist
-
-- Add 16 screenshots for CloudWatch Agent installation evidence
-- Update evidence-checklist.md with embedded images
-- Mark all completed steps with checkmarks
-- Add cleanup instructions to avoid charges

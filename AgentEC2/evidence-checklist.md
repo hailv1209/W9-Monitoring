@@ -1,7 +1,7 @@
 # CloudWatch Agent on EC2 — Evidence Checklist
 
 ## Mục đích
-File này ghi lại tiến độ hoàn thành bài Hands-On. Mỗi mục cần chụp screenshot khi hoàn thành.
+File này ghi lại tiến độ hoàn thành bài Hands-On.
 
 ---
 

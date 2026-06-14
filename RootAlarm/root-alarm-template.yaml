@@ -1,0 +1,304 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Root Account Login Alarm with SNS Email Alert.
+  Creates a CloudTrail Trail (multi-region) sending logs to CloudWatch Logs,
+  a Metric Filter that detects AWS root account activity, and a CloudWatch
+  Alarm that fires on ANY single root login (Sum >= 1 in 5 minutes)
+  and notifies a Security team via SNS Email.
+
+Parameters:
+  EmailAddress:
+    Description: Email address to receive root-login alerts (Security team)
+    Type: String
+    Default: "haileab542@gmail.com"
+  TrailName:
+    Description: Name of the CloudTrail Trail
+    Type: String
+    Default: "RootAlarmTrail"
+  TrailBucketName:
+    Description: S3 bucket for CloudTrail logs (must be globally unique)
+    Type: String
+    Default: ""
+  LogGroupName:
+    Description: CloudWatch Logs group for CloudTrail events
+    Type: String
+    Default: "RootAlarmCloudTrailLogGroup"
+  LogGroupRetentionInDays:
+    Description: Retention in days for the CloudTrail Log Group
+    Type: Number
+    Default: 90
+  MetricFilterName:
+    Description: Name of the CloudWatch Logs metric filter
+    Type: String
+    Default: "RootAccountLoginFilter"
+  MetricNamespace:
+    Description: CloudWatch metric namespace for the custom metric
+    Type: String
+    Default: "Security"
+  MetricName:
+    Description: CloudWatch metric name published by the filter
+    Type: String
+    Default: "RootAccountLoginCount"
+  AlarmName:
+    Description: Name of the CloudWatch Alarm
+    Type: String
+    Default: "RootAlarm-RootLogin"
+  AlarmThreshold:
+    Description: Number of root logins in a 5-min period that triggers the alarm
+    Type: Number
+    Default: 1
+  PeriodSeconds:
+    Description: Evaluation period in seconds (300 = 5 minutes)
+    Type: Number
+    Default: 300
+  EvaluationPeriods:
+    Description: Number of consecutive periods breaching threshold before alarm
+    Type: Number
+    Default: 1
+  SNSTopicName:
+    Description: SNS Topic name for security notifications
+    Type: String
+    Default: "RootAlarmTopic"
+
+Resources:
+  # ──────────────────────────────────────────
+  # SNS Topic — Security team notifications
+  # ──────────────────────────────────────────
+  RootAlarmSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Ref SNSTopicName
+      DisplayName: Root Account Alarm
+      Tags:
+        - Key: Project
+          Value: RootAlarm
+        - Key: Security
+          Value: "true"
+
+  # ──────────────────────────────────────────
+  # SNS Topic Policy (allow CloudWatch to publish)
+  # ──────────────────────────────────────────
+  RootAlarmSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref RootAlarmSNSTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowCloudWatchToPublish
+            Effect: Allow
+            Principal:
+              Service: cloudwatch.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref RootAlarmSNSTopic
+
+  # ──────────────────────────────────────────
+  # Email Subscription
+  # ──────────────────────────────────────────
+  RootAlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref RootAlarmSNSTopic
+      Protocol: email
+      Endpoint: !Ref EmailAddress
+
+  # ──────────────────────────────────────────
+  # S3 Bucket — CloudTrail log storage
+  # ──────────────────────────────────────────
+  TrailLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !If
+        - BucketNameProvided
+        - !Ref TrailBucketName
+        - !Sub "root-alarm-trail-bucket-${AWS::AccountId}"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: RootAlarm
+
+  # ──────────────────────────────────────────
+  # S3 Bucket Policy — Allow CloudTrail to write
+  # ──────────────────────────────────────────
+  TrailLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref TrailLogBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !GetAtt TrailLogBucket.Arn
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub "${TrailLogBucket.Arn}/AWSLogs/${AWS::AccountId}/*"
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
+  # ──────────────────────────────────────────
+  # IAM Role — CloudTrail → CloudWatch Logs
+  # ──────────────────────────────────────────
+  CloudTrailCWLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "CloudTrailRoleForCloudWatchLogs-${AWS::StackName}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudTrailLogsPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:${LogGroupName}:log-stream:*"
+
+  # ──────────────────────────────────────────
+  # CloudWatch Log Group — CloudTrail destination
+  # ──────────────────────────────────────────
+  CloudTrailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      RetentionInDays: !Ref LogGroupRetentionInDays
+      Tags:
+        - Key: Project
+          Value: RootAlarm
+
+  # ──────────────────────────────────────────
+  # CloudTrail Trail — Multi-region, send to CloudWatch
+  # ──────────────────────────────────────────
+  RootAlarmTrail:
+    Type: AWS::CloudTrail::Trail
+    DependsOn:
+      - TrailLogBucketPolicy
+      - CloudTrailCWLogsRole
+    Properties:
+      TrailName: !Ref TrailName
+      IsMultiRegionTrail: true
+      IncludeGlobalServiceEvents: true
+      EnableLogFileValidation: true
+      S3BucketName: !Ref TrailLogBucket
+      S3KeyPrefix: !Sub "AWSLogs/${AWS::AccountId}/CloudTrail"
+      CloudWatchLogsLogGroupArn: !GetAtt CloudTrailLogGroup.Arn
+      CloudWatchLogsRoleArn: !GetAtt CloudTrailCWLogsRole.Arn
+      EventSelectors:
+        - IncludeManagementEvents: true
+          ReadWriteType: All
+      Tags:
+        - Key: Project
+          Value: RootAlarm
+
+  # ──────────────────────────────────────────
+  # Metric Filter — Detect any Root activity
+  # Filter Pattern:
+  #   { $.userIdentity.type = "Root" && $.eventType != "AwsServiceEvent" }
+  # ──────────────────────────────────────────
+  RootAccountLoginMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterName: !Ref MetricFilterName
+      FilterPattern: '{ $.userIdentity.type = "Root" && $.eventType != "AwsServiceEvent" }'
+      MetricTransformations:
+        - MetricName: !Ref MetricName
+          MetricNamespace: !Ref MetricNamespace
+          MetricValue: "1"
+          DefaultValue: 0
+
+  # ──────────────────────────────────────────
+  # CloudWatch Alarm — Fires on ANY root login
+  # ──────────────────────────────────────────
+  RootLoginAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Ref AlarmName
+      AlarmDescription: Alert when AWS root account is used (any single login triggers alarm)
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref RootAlarmSNSTopic
+      OKActions:
+        - !Ref RootAlarmSNSTopic
+      InsufficientDataActions: []
+      MetricName: !Ref MetricName
+      Namespace: !Ref MetricNamespace
+      Statistic: Sum
+      Period: !Ref PeriodSeconds
+      EvaluationPeriods: !Ref EvaluationPeriods
+      DatapointsToAlarm: 1
+      Threshold: !Ref AlarmThreshold
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      Tags:
+        - Key: Project
+          Value: RootAlarm
+        - Key: Security
+          Value: "true"
+
+Conditions:
+  BucketNameProvided: !Not [!Equals [!Ref TrailBucketName, ""]]
+
+Outputs:
+  TrailArn:
+    Description: ARN of the CloudTrail Trail
+    Value: !GetAtt RootAlarmTrail.Arn
+    Export:
+      Name: RootAlarm-TrailArn
+
+  TrailLogBucketName:
+    Description: S3 bucket storing CloudTrail logs
+    Value: !Ref TrailLogBucket
+    Export:
+      Name: RootAlarm-TrailLogBucketName
+
+  CloudTrailLogGroupArn:
+    Description: ARN of the CloudWatch Log Group receiving CloudTrail events
+    Value: !GetAtt CloudTrailLogGroup.Arn
+    Export:
+      Name: RootAlarm-LogGroupArn
+
+  MetricFilterName:
+    Description: Name of the root-account metric filter
+    Value: !Ref RootAccountLoginMetricFilter
+
+  SNSTopicArn:
+    Description: ARN of the SNS Topic
+    Value: !Ref RootAlarmSNSTopic
+    Export:
+      Name: RootAlarm-SNSTopicArn
+
+  AlarmArn:
+    Description: ARN of the CloudWatch Alarm
+    Value: !GetAtt RootLoginAlarm.Arn
+    Export:
+      Name: RootAlarm-AlarmArn
+
+  AlarmName:
+    Description: Name of the CloudWatch Alarm
+    Value: !Ref RootLoginAlarm
